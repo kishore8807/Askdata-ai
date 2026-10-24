@@ -1,240 +1,505 @@
 # 🤖 AI Database Work Assistant
 
-> A secure, role-based database assistant that turns natural-language requests into reviewable PostgreSQL queries.
+### Natural Language to SQL • Role-Based Access Control • Human Approval • PostgreSQL
 
-AI Database Work Assistant is an application for database teams. Users submit requests in plain English, and a locally hosted language model (Qwen 2.5 3B through Ollama) proposes PostgreSQL statements. The application validates the SQL, applies role-based access control (RBAC), and routes sensitive operations to a database administrator (DBA) for approval before execution. Actions are recorded in an audit log.
+A secure, AI-powered database assistant that converts natural-language requests into reviewable PostgreSQL queries. It combines local AI, SQL validation, role-based access control (RBAC), human approval, and audit logging to make database operations safer and easier.
 
-## ✨ Key workflow
+**AI generates → Human reviews → System validates → RBAC checks → DBA approves sensitive changes → PostgreSQL executes → Audit log records**
+
+---
+
+## 📌 Table of Contents
+
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Technology Stack](#-technology-stack)
+- [Project Structure](#-project-structure)
+- [Installation](#-installation)
+- [PostgreSQL Setup](#-postgresql-setup)
+- [Local AI Setup](#-local-ai-setup)
+- [Environment Configuration](#-environment-configuration)
+- [Database Initialization](#-database-initialization)
+- [User Roles and Permissions](#-user-roles-and-permissions)
+- [Approval Workflow](#-approval-workflow)
+- [File Upload and Data Export](#-file-upload-and-data-export)
+- [API Documentation](#-api-documentation)
+- [Security](#-security)
+- [Running Tests](#-running-tests)
+- [Troubleshooting](#-troubleshooting)
+- [Future Improvements](#-future-improvements)
+- [License](#-license)
+
+---
+
+## 🎯 Overview
+
+AI Database Work Assistant helps database teams interact with PostgreSQL using natural language instead of manually writing every SQL query.
+
+Users submit requests in plain English. A locally hosted language model proposes SQL statements, which are then validated and checked against the user's permissions before execution.
+
+Sensitive operations can require approval from a Database Administrator (DBA). Every sensitive action is recorded in an audit log.
+
+### Why This Project?
+
+- Simplifies database interaction using natural language.
+- Reduces the need to manually write SQL queries.
+- Adds permission checks before database operations.
+- Requires human approval for sensitive changes when applicable.
+- Uses a locally hosted AI model instead of a paid cloud AI API.
+- Supports spreadsheet-based operations and downloadable results.
+
+## ✨ Key Features
+
+### 🧠 AI-Powered SQL Generation
+- Converts natural-language requests into PostgreSQL queries.
+- Uses Qwen 2.5 3B through Ollama.
+- Retrieves relevant database schema information to help generate queries.
+- Treats AI-generated SQL as a proposal that must be validated.
+
+### 🔐 Authentication and Access Control
+- Supports three roles: DBA, Database Developer, and Data Analyst.
+- Uses secure session handling and role-based permissions.
+- Supports session expiration, logout, and token revocation.
+- Restricts operations according to the configured permission matrix.
+
+### 🛡️ SQL Validation and Execution
+- Uses parser-based SQL validation.
+- Applies an allow-list and operation classification.
+- Checks permissions before executing SQL.
+- Uses query timeouts, transaction handling, and rollback on failure.
+- Executes SELECT-only transactions in read-only mode.
+
+### 👨‍💻 DBA Approval Workflow
+- Routes sensitive operations for approval when required.
+- Provides an in-app notification workflow.
+- Allows DBAs to approve or reject pending requests.
+- Revalidates stored SQL before an approved request executes.
+
+### 📊 Excel and CSV Support
+- Accepts Excel and CSV attachments.
+- Supports file-driven data operations.
+- Previews uploaded data before processing.
+- Supports multiple SQL statements in a single request.
+- Exports query results as CSV or Excel.
+
+### 📝 Audit Logging
+- Records sensitive database operations.
+- Tracks approval and execution outcomes.
+- Supports audit-log access for DBAs.
+
+---
+
+## 🏗️ System Architecture
+
+The application uses a frontend, Flask proxy, FastAPI backend, local AI model, and PostgreSQL database.
 
 ```text
-AI generates → Human reviews → System validates → RBAC checks → DBA approves sensitive changes → PostgreSQL executes → Audit log records
+                 ┌──────────────────────┐
+                 │     Web Interface    │
+                 │    HTML / CSS / JS   │
+                 └──────────┬───────────┘
+                            │
+                 ┌──────────▼───────────┐
+                 │      Flask Proxy     │
+                 │   frontend/app.py    │
+                 └──────────┬───────────┘
+                            │
+                 ┌──────────▼───────────┐
+                 │     FastAPI Backend  │
+                 │ Authentication       │
+                 │ AI SQL Generation    │
+                 │ SQL Validation       │
+                 │ RBAC Permissions     │
+                 │ DBA Approvals        │
+                 │ Query Execution      │
+                 │ Audit Logging        │
+                 └──────┬────────┬──────┘
+                        │        │
+              ┌─────────▼──┐  ┌──▼────────────┐
+              │  Ollama    │  │  PostgreSQL   │
+              │ Qwen 2.5 3B│  │   Database    │
+              └────────────┘  └───────────────┘
 ```
 
-## 🎨 Interface
+### How It Works
 
-The UI is the exported Stitch design (warm editorial palette, Newsreader / Inter / JetBrains Mono, AskData Ai sidebar shell) wired to real endpoints. Design tokens in frontend/static/tailwind-config.js are copied verbatim from the export.
+1. The user submits a request in natural language.
+2. The AI generates a proposed SQL query.
+3. The backend validates the SQL.
+4. The permission system checks the user's role.
+5. Sensitive operations are routed for DBA approval when required.
+6. Authorized operations are executed against PostgreSQL.
+7. The system records relevant actions in the audit log.
 
-## 1. Overview
+---
 
-| Capability | Where |
-| --- | --- |
-| Login, three roles, session expiry, logout | backend/auth/ |
-| Natural language → SQL (local Qwen 2.5 3B) | backend/ai/ |
-| SQL validation (parser-based allow-list) | backend/database/sql_validator.py |
-| RBAC permission matrix (configurable) | backend/auth/permissions.py |
-| DBA approval workflow + in-app notifications | backend/approvals/ |
-| Safe PostgreSQL execution (pool, timeouts, rollback) | backend/database/postgres.py |
-| Attach an Excel/CSV file to a request; bulk update / remove / add driven by the file | backend/excel/, backend/ai/batch.py |
-| Multi-query execution and CSV / Excel result download | backend/database/, backend/export_routes.py |
-| Audit log | backend/audit/ |
-| Stitch UI + Flask front door | frontend/ |
+## 🛠️ Technology Stack
 
-## 2. Architecture
+| Category | Technologies |
+|---|---|
+| Programming Language | Python |
+| Frontend | HTML, CSS, JavaScript, Tailwind CSS |
+| Frontend Server / Proxy | Flask |
+| Backend API | FastAPI |
+| Data Validation | Pydantic |
+| Database | PostgreSQL |
+| Database Driver | Psycopg 3 |
+| SQL Validation | SQLGlot |
+| AI Runtime | Ollama |
+| AI Model | Qwen 2.5 3B |
+| Authentication | JWT, bcrypt |
+| Data Processing | Pandas |
+| Excel Support | OpenPyXL, xlrd |
+| Testing | Pytest |
 
-```text
-Browser (Stitch UI: HTML/CSS/JS)
-        │  same origin → HttpOnly session cookie, CSRF header
-        ▼
-Flask  (frontend/app.py)  serves the UI, stateless reverse proxy for /api/*
-        ▼
-FastAPI (backend/main.py)
-   ├─ auth ──────────── bcrypt, JWT in HttpOnly cookie, CSRF, lockout, revocation
-   ├─ AI agent ──────── schema retrieval → prompt → Ollama (qwen2.5:3b) → SQL proposal
-   ├─ SQL validator ─── parse → allow-list → classify → RBAC decision → normalised SQL
-   ├─ approvals ─────── PENDING → APPROVED → EXECUTED / FAILED, or REJECTED
-   ├─ executor ──────── pooled, READ ONLY for SELECT, timeouts, commit/rollback
-   ├─ excel ─────────── parse, validate, server-side staging, explicit import
-   └─ audit ─────────── every sensitive action
-        ▼
-PostgreSQL  (app account + optional least-privilege SQL-execution account)
-Two PostgreSQL pools are used: one for application metadata and one for user SQL, so a slow user query cannot starve authentication.
-```
+**AI processing:** The project uses a locally hosted model. No paid or cloud AI API is used for AI inference.
 
-Layout note. The specification lists both backend/database.py and a backend/database/ package. Python cannot have both, so the pool code lives in backend/database/__init__.py / _pool.py.
+---
 
-## 3. Technology stack
-
-Python 3.12 · Flask · FastAPI · Pydantic · psycopg 3 (+ pool) · sqlglot (PostgreSQL dialect parser) · pandas · openpyxl · xlrd (attachments and exports) · bcrypt · PyJWT · PostgreSQL 18 · Ollama + Qwen 2.5 3B (local only) · HTML/CSS/JS + Tailwind (Stitch tokens). No paid or cloud AI API is used anywhere.
-## 4. Installation
-
-git clone <your repo> ai-database-assistant && cd ai-database-assistant
-python -m venv .venv && source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt                           # add requirements-dev.txt for tests
-cp .env.example .env                                      # then edit it (see §8)
-## 5. PostgreSQL setup
-
-Install PostgreSQL 18 (the SQL is compatible with 14+), then:
-psql -U postgres -c "CREATE DATABASE ai_database;"
-Or with Docker only for the database: docker compose up -d db.
-## 6. Ollama installation
-
-Install from https://ollama.com/download, then make sure it is running (ollama serve; it listens on http://localhost:11434).
-## 7. Qwen model setup
-
-ollama pull qwen2.5:3b
-ollama run qwen2.5:3b "say hi"      # optional smoke test
-If Ollama is stopped, the app answers “AI service is unavailable. Please start Ollama.” and never falls back to a cloud model. The header pill shows Ready / Model missing / Offline live.
-## 8. Environment configuration
-
-cp .env.example .env, then at minimum set:
-| Variable | Purpose |
-| --- | --- |
-| POSTGRES_* | connection to your database |
-| SECRET_KEY | ≥ 32 chars; python -c "import secrets; print(secrets.token_urlsafe(48))". The API refuses to start without it. |
-| OLLAMA_BASE_URL, OLLAMA_MODEL | defaults http://localhost:11434, qwen2.5:3b |
-| COOKIE_SECURE=true | when served over HTTPS |
-| POSTGRES_EXEC_USER/PASSWORD | optional, recommended least-privilege SQL account (§17) |
-
-No secrets are hard-coded; .env is git-ignored.
-## 9. Database initialisation
-
-python -m backend.scripts.init_db --seed                  # tables, indexes, constraints + sample data
-python -m backend.scripts.init_db --seed --least-privilege   # …and the restricted SQL-execution role
-python -m backend.scripts.bootstrap_users                 # creates dba / developer / analyst (prompts for passwords)
-Passwords are never stored in SQL files or code. For scripted setups: DBA_PASSWORD=… DEVELOPER_PASSWORD=… ANALYST_PASSWORD=… python -m backend.scripts.bootstrap_users (min. 10 characters). Add more users: python -m backend.scripts.bootstrap_users --add alice alice@corp.com DEVELOPER.
-
-Both scripts are idempotent. database/schema.sql / seed.sql can also be run directly with psql -f. Tables: users, employees, departments, projects, tasks, approval_requests, audit_logs as specified, plus notifications, revoked_tokens (logout) and import_staging (Excel previews).
-## 10. User roles
-
-| Role | Purpose | Summary |
-| --- | --- | --- |
-| DBA | Administration, approvals, audit | Everything; dangerous statements still need explicit confirmation |
-| Database Developer | Development work | Reads/inserts/creates/alters directly; UPDATE / DELETE / DROP / TRUNCATE / destructive ALTER need DBA approval |
-| Data Analyst | Analysis | Read-only (SELECT, joins, aggregates, CTEs, subqueries) |
-
-Default matrix (GET /api/auth/permissions, also shown in Settings):
-| Operation | DBA | Developer | Analyst |
-| --- | --- | --- | --- |
-| SELECT / JOIN / GROUP BY / HAVING / ORDER BY | ✅ | ✅ | ✅ |
-| INSERT | ✅ | ✅ | ❌ |
-| UPDATE, DELETE | ✅ | ⏳ DBA approval | ❌ |
-| CREATE, ALTER | ✅ | ✅ (controlled) | ❌ |
-| DROP, TRUNCATE | ✅ (confirm) | ⏳ DBA approval | ❌ |
-| BEGIN … COMMIT | ✅ | ✅ (strictest op inside wins) | ❌ |
-
-“Controlled” = allowed, but protected tables stay off-limits and destructive ALTER (drop/rename/retype column) escalates to approval.
-
-Configuring permissions. Point PERMISSIONS_FILE at JSON, e.g. {"DEVELOPER": {"DELETE": "DENY", "CREATE": "APPROVAL"}}. Values: ALLOW, APPROVAL, DENY. Invariants cannot be relaxed: Analysts are read-only, and a broken file falls back to the safe defaults.
-## 11. DBA approval workflow
-
-Developer: "Change Kumar salary to 60000"
-   → AI SQL → validate → Proceed & Execute
-   → approval_requests row (PENDING) + 🔔 to every active DBA        (nothing touches PostgreSQL)
-DBA opens Pending Approvals → reads requester, role, request text, SQL, operation, table, time
-   → Approve & Execute            → re-validates the STORED SQL against the requester's role → executes → EXECUTED
-   → Reject (reason required)     → REJECTED, never executes → 🔔 to the developer with the reason
-Statuses: PENDING, APPROVED, REJECTED, EXECUTED, FAILED. The approval state lives only in PostgreSQL; fields like approved: true sent by a client are ignored. The request row is locked (FOR UPDATE) so double-approval and approve/reject races are impossible; a DBA cannot approve their own request; dangerous requests need the DBA's explicit confirmation tick.
-
-API-wise the execution step happens inside POST /api/approvals/{id}/approve, performed by the backend after it verifies the request is PENDING, re-validates it, and records the DBA as reviewer.
-## 12. Attaching files, multiple queries and downloads
-
-### Attach a file in Natural Language Intent
-
-## 1. Click Attach file (or drag a file onto the panel). .xlsx, .xls and .csv are accepted. The first row must be column names; they are normalised to snake_case (Employee Code → employee_code). The chip shows the file name, the row count and the columns; Preview shows every row, ✕ removes it.
-
-## 2. Type what you want, e.g. “Update the salary of the employees in the file”, “Remove the employees listed in the file”, “Add the employees in the file”, or “Show the employees from the file”.
-
-## 3. Generate SQL. The model is told which columns the file has and is asked to write the SQL for one row with {{column}} placeholders. The server then expands that template once per row, rendering every value as a properly escaped SQL literal, and validates the whole result like any other SQL. The screen shows the template, the expanded queries, and “Runs once for each of the N rows in …”.
-
-## 4. Proceed & Execute. All rows run in one all-or-nothing transaction: if row 17 fails, nothing is saved and the message says “Query 17 of 40 failed … No changes were saved.”
-
-Why a template? A 3B model cannot reliably write hundreds of statements, and file contents must never be trusted as SQL. A cell containing x'); DROP TABLE employees;-- stays inert text.
-
-RBAC and approval apply exactly as for typed SQL: an Analyst can only run read-only file-driven queries; a Developer’s file-driven UPDATE/DELETE becomes one approval request containing all N queries; a DBA runs them directly (after confirmation when dangerous). Files are stored server-side per user (one active file; auto-expires after a day), formulas (=…) are rejected, files over MAX_ATTACH_ROWS (default 500) are rejected rather than silently truncated.
-### Multiple queries
-
-- Ask for several things (“Show departments and count employees”) and the model returns several statements, or click Write SQL manually and separate queries with ;.
-- Every statement is validated individually and the strictest decision wins (a script containing one DELETE needs approval for a Developer; one DROP is denied to an Analyst). The script runs as one atomic transaction. A script made only of SELECTs runs in a READ ONLY transaction.
-- Results appear as one tab per query, plus a per-query summary. Up to MAX_STATEMENTS (default 500) queries per execution; long batches of identically shaped SELECTs are merged into a single table.
-- An explicit BEGIN; …; COMMIT; (or ROLLBACK;) block still works.
-### Downloading results
-
-The Result panel has CSV (the tab you are viewing) and Excel (every result as its own sheet) buttons. Files are built by the server, cells that could run as spreadsheet formulas are neutralised, the limit is MAX_EXPORT_ROWS, and each download is audited (RESULT_EXPORTED).
-## 13. API documentation
-
-All write requests need the X-CSRF-Token header (value of the csrf_token cookie; the UI does this automatically). Errors look like {"success": false, "message": "…"}.
-| Method & path | Role | Description |
-| --- | --- | --- |
-| POST /api/auth/login | public | {username, password} (username or email) → sets cookies |
-| POST /api/auth/logout | any | revokes the session token |
-| GET /api/auth/me | any | user, role, own permissions, expiry |
-| GET /api/auth/permissions | any | full RBAC matrix |
-| POST /api/query/generate | any | {question, attachment_id?} → {sql, statement_count, batch, operation_type, requires_confirmation, requires_dba_approval, valid, validation_errors, dangerous, …}; executes nothing |
-| POST /api/query/validate | any | dry-run validation of edited SQL |
-| POST /api/query/execute | any | {sql, question?, confirm_dangerous?} → 200 {results: [per query], …}, 202 approval created, 403 permission, 409 dangerous-confirmation needed, 422 validation, 503 DB down |
-| GET /api/query/history | any | your recent SQL |
-| GET /api/schema | any | schema visible to your role |
-| GET /api/status | any | database + AI health |
-| GET /api/approvals/pending | DBA | pending requests (with danger info) |
-| GET /api/approvals/mine | any | your requests (DBA: all) |
-| POST /api/approvals/{id}/approve | DBA | {confirm_dangerous?} — approves and executes |
-| POST /api/approvals/{id}/reject | DBA | {reason} |
-| GET /api/notifications, POST /api/notifications/read | any | in-app notifications |
-| POST /api/attachments | any | multipart file (.xlsx/.xls/.csv) → {attachment_id, columns, row_count, sample} |
-| GET /api/attachments/{id}, DELETE /api/attachments/{id} | owner | preview all rows / remove |
-| POST /api/export | any | {format: csv\|xlsx, sheets: [{name, columns, rows}]} → file download |
-| GET /api/employees | any | employee directory (?search=) |
-| GET /api/audit-logs | DBA | ?action=&user_id=&limit=&offset= |
-| GET /api/health | public | liveness |
-
-## 14. Security
-
-- Passwords: bcrypt (cost 12), min. 10 characters, constant-time check even for unknown users, generic error message, lockout after repeated failures (LOGIN_MAX_FAILURES).
-- Sessions: JWT in an HttpOnly, SameSite=Strict (and Secure when COOKIE_SECURE=true) cookie; expiry; server-side revocation on logout; CSRF token signed inside the JWT and checked on every non-GET request.
-- The backend is authoritative: the role is read from the database on every request — forged tokens, forged role claims, forged “approved” flags are ignored (tested).
-- The Flask proxy is stateless. It accepts no cookies of its own, which a regression test enforces (an earlier draft leaked one user’s session to all visitors through a shared HTTP session).
-- SQL: parser-based validation, allow-list, normalised execution, statement/lock timeouts, result cap (server-side cursor), READ ONLY transactions for SELECT, rollback on any failure.
-- Least-privilege execution (recommended): python -m backend.scripts.init_db --least-privilege creates POSTGRES_EXEC_USER, which owns only the business tables, has no access to users and friends and is read-only on audit_logs / approval_requests. PostgreSQL itself then refuses credential access or audit tampering even if the validator had a bug (tested).
-- Attached files: extension + signature check, size/row/column limits, formulas rejected, bounded reads, private per user, never executed as SQL (values are escaped literals inside a validated template). Prompt-injection text inside a file can at worst change the model's draft, which is still validated, permission-checked and (for sensitive changes) approved.
-- Exports: server-built, spreadsheet-formula-safe, size-limited, audited.
-- Clean sign-out: signing out (or session expiry) wipes all client-side state, so the next person on the same browser tab sees nothing from the previous session.
-- Errors: friendly messages only; stack traces and driver details go to server logs. Audit logs never contain passwords or tokens.
-- Headers: CSP, X-Frame-Options: DENY, nosniff, no-store on API responses. All UI output is HTML-escaped.
-- Deploy checklist: HTTPS in front (COOKIE_SECURE=true), strong SECRET_KEY, restricted .env, don’t expose port 8000 or 5432 publicly, keep Ollama on localhost.
-## 15. Project structure
+## 📂 Project Structure
 
 ```text
-├── main.py                    # Application entry point
+ai-database-assistant/
+│
 ├── backend/
-│   ├── ai/                    # Prompting, schema retrieval and SQL generation
-│   ├── approvals/             # DBA approval workflow
-│   ├── audit/                 # Audit logging and routes
-│   ├── auth/                  # Authentication, sessions and permissions
-│   ├── database/              # PostgreSQL pools, execution and validation
-│   ├── excel/                 # Spreadsheet attachment processing
-│   └── scripts/               # Database and user bootstrap utilities
-├── frontend/                  # Flask UI and static assets
-├── database/                  # Database schema and seed data
-├── tests/                     # Backend and UI smoke tests
+│   ├── ai/                 # AI prompting and SQL generation
+│   ├── approvals/          # DBA approval workflow
+│   ├── audit/              # Audit logging
+│   ├── auth/               # Authentication and permissions
+│   ├── database/           # Database pools and SQL validation
+│   ├── excel/              # Spreadsheet processing
+│   └── scripts/            # Database initialization utilities
+│
+├── frontend/
+│   ├── app.py              # Flask application and proxy
+│   └── static/             # Frontend assets
+│
+├── database/
+│   ├── schema.sql          # Database schema
+│   └── seed.sql            # Sample data, if included
+│
+├── tests/                  # Automated tests
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── Dockerfile
 ├── docker-compose.yml
+├── .env.example
+├── .gitignore
 └── README.md
-16. Running tests
-Install the development dependencies and run the test suite:
-pip install -r requirements-dev.txt
-pytest
-The test suite covers authentication and RBAC, SQL validation and execution, approvals, file attachments, exports, proxy behavior, and security controls. Some integration tests may require a configured PostgreSQL instance and the relevant environment variables.
-17. Operational recommendations
-- Run behind HTTPS in production and set COOKIE_SECURE=true.
-- Store secrets in environment variables or a managed secret store; never commit .env.
-- Keep PostgreSQL and Ollama ports private and restrict network access.
-- Use the least-privilege SQL execution account where possible.
-- Back up the database and audit records according to your organisation's retention policy.
-- Review permission configuration and approval policies before production use.
-- Treat AI-generated SQL as a proposal: inspect the query and its impact before execution.
-18. Troubleshooting
-Issue	Recommended action
-AI service is unavailable	Start Ollama and verify that the configured model is installed.
-Database connection fails	Check PostgreSQL status and the POSTGRES_* settings in .env.
-Application refuses to start	Confirm that required environment variables, especially SECRET_KEY, are configured.
-A request requires DBA approval	Sign in with a DBA account to review the pending request.
-Spreadsheet upload is rejected	Check the file type, size, row limit, column headers, and whether cells contain formulas.
 ```
 
-## 19. License
+*Note: The actual repository structure may contain additional files or differ slightly from this overview.*
 
-No license is specified in this repository. Add a LICENSE file before distributing the project if you intend to apply an open-source license.
-#   A s k d a t a - a i  
- 
+---
+
+## ⚙️ Installation
+
+### Prerequisites
+
+Install the following before starting:
+
+- Python 3.12
+- PostgreSQL 14 or later
+- Ollama
+- Git
+
+### Step 1: Clone the Repository
+
+Clone the project repository and open its root directory.
+
+### Step 2: Create a Virtual Environment
+
+Create and activate a Python virtual environment for the project.
+
+On Windows, use the activation method appropriate for your terminal.
+
+### Step 3: Install Dependencies
+
+Install the packages listed in `requirements.txt`.
+
+### Step 4: Configure Environment Variables
+
+Create your local `.env` file using `.env.example` as a reference.
+
+Update the database credentials and application secret before starting the application.
+
+---
+
+## 🐘 PostgreSQL Setup
+
+1. Install PostgreSQL.
+2. Create a database for the application.
+3. Configure the database connection settings in `.env`.
+4. Initialize the application tables using the provided database initialization script.
+5. Create the required application users.
+
+The project supports PostgreSQL 14 and later according to its current setup documentation.
+
+**Important:** Never commit database passwords or other secrets to GitHub.
+
+---
+
+## 🤖 Local AI Setup
+
+This project uses Ollama to run Qwen 2.5 3B locally.
+
+### Setup Steps
+
+1. Install Ollama.
+2. Start the Ollama service.
+3. Download the Qwen 2.5 3B model.
+4. Configure the model and Ollama endpoint in the environment settings.
+5. Start the application and verify AI availability.
+
+Default model:
+
+`qwen2.5:3b`
+
+Default Ollama endpoint:
+
+`http://localhost:11434`
+
+If Ollama is unavailable, the application reports that the AI service is unavailable rather than switching to a cloud AI model.
+
+---
+
+## 🔑 Environment Configuration
+
+Configure the required environment variables in `.env`.
+
+| Variable | Purpose |
+|---|---|
+| `POSTGRES_*` | PostgreSQL connection settings |
+| `SECRET_KEY` | Application signing secret |
+| `OLLAMA_BASE_URL` | Local Ollama endpoint |
+| `OLLAMA_MODEL` | AI model name |
+| `COOKIE_SECURE` | Enables secure cookies when using HTTPS |
+| `POSTGRES_EXEC_USER` | Optional restricted SQL execution account |
+| `POSTGRES_EXEC_PASSWORD` | Password for the optional execution account |
+
+Use a strong application secret and keep `.env` excluded from Git.
+
+---
+
+## 🗄️ Database Initialization
+
+The project provides scripts to initialize the database and create application users.
+
+The setup process includes:
+
+- Creating database tables and indexes.
+- Loading optional sample data.
+- Configuring the restricted SQL execution role when required.
+- Creating the initial DBA, Developer, and Analyst accounts.
+
+Use the scripts provided by the repository and follow their prompts to configure passwords.
+
+**Security note:** Never publish real passwords or production database credentials in the repository.
+
+---
+
+## 👥 User Roles and Permissions
+
+The application supports three roles.
+
+| Operation | DBA | Developer | Analyst |
+|---|---|---|---|
+| SELECT | ✅ | ✅ | ✅ |
+| INSERT | ✅ | ✅ | ❌ |
+| UPDATE | ✅ | Approval may be required | ❌ |
+| DELETE | ✅ | Approval may be required | ❌ |
+| CREATE | ✅ | Controlled access | ❌ |
+| ALTER | ✅ | Controlled access | ❌ |
+| DROP / TRUNCATE | Confirmation may be required | Approval may be required | ❌ |
+| Audit Logs | ✅ | Restricted | Restricted |
+
+The exact permissions are governed by the application's permission matrix.
+
+Analysts are read-only. Destructive operations have additional restrictions and may require explicit confirmation or DBA approval.
+
+---
+
+## 🔄 Approval Workflow
+
+The approval system provides an additional layer of protection for sensitive database changes.
+
+### Workflow
+
+1. A Developer submits a natural-language request.
+2. The AI generates the proposed SQL.
+3. The system validates the SQL and checks permissions.
+4. If approval is required, the request enters the pending queue.
+5. Active DBAs receive in-app notifications.
+6. A DBA reviews the request and its proposed SQL.
+7. The DBA approves or rejects the request.
+8. Approved requests are revalidated before execution.
+9. The final outcome is recorded.
+
+### Approval States
+
+- `PENDING`
+- `APPROVED`
+- `REJECTED`
+- `EXECUTED`
+- `FAILED`
+
+Approval is handled by the backend. The client cannot bypass the workflow simply by sending an approved flag.
+
+---
+
+## 📊 File Upload and Data Export
+
+### Supported File Types
+
+- `.csv`
+- `.xlsx`
+- `.xls`
+
+### File Processing
+
+Users can attach a spreadsheet and request operations such as:
+
+- Retrieve records matching the uploaded data.
+- Add records from a file.
+- Update records using spreadsheet values.
+- Remove records matching the file.
+- Preview uploaded rows before processing.
+
+The backend validates uploaded files and their contents. File-driven operations follow the same SQL validation and permission checks as other requests.
+
+### Exporting Results
+
+Query results can be exported as:
+
+- CSV
+- Excel
+
+Exports are generated by the server and are subject to configured size limits and auditing.
+
+---
+
+## 🔌 API Documentation
+
+The backend exposes API endpoints for authentication, SQL generation, validation, execution, approvals, attachments, exports, and auditing.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/auth/login` | Authenticate a user |
+| POST | `/api/auth/logout` | Sign out and revoke the session |
+| GET | `/api/auth/me` | Retrieve the current user |
+| GET | `/api/auth/permissions` | Retrieve the permission matrix |
+| POST | `/api/query/generate` | Generate proposed SQL |
+| POST | `/api/query/validate` | Validate SQL |
+| POST | `/api/query/execute` | Execute authorized SQL |
+| GET | `/api/query/history` | Retrieve recent SQL history |
+| GET | `/api/schema` | Retrieve schema information visible to the role |
+| GET | `/api/status` | Check database and AI status |
+| GET | `/api/approvals/pending` | Retrieve pending approvals |
+| GET | `/api/approvals/mine` | Retrieve approval requests |
+| POST | `/api/approvals/{id}/approve` | Approve and execute a request |
+| POST | `/api/approvals/{id}/reject` | Reject a request |
+| GET | `/api/notifications` | Retrieve notifications |
+| POST | `/api/attachments` | Upload a spreadsheet |
+| POST | `/api/export` | Export query results |
+| GET | `/api/audit-logs` | Retrieve audit logs |
+
+The application also provides endpoints for attachment previews, notification management, employee directory access, and health checks.
+
+Write requests require the appropriate CSRF token. Access to endpoints depends on authentication and the configured role permissions.
+
+---
+
+## 🔐 Security
+
+Security is a central part of the application design.
+
+Key controls include:
+
+- Password hashing with bcrypt.
+- Session handling using JWT in HttpOnly cookies.
+- CSRF protection for write requests.
+- Session expiry and token revocation.
+- Role-based access control.
+- Parser-based SQL validation.
+- Read-only transactions for SELECT-only operations.
+- Query and lock timeouts.
+- Transaction rollback on failure.
+- DBA approval for sensitive operations when required.
+- Restricted SQL execution credentials as an additional security measure.
+- File validation and spreadsheet formula protection.
+- Audit logging for sensitive actions.
+- Security headers and restricted error details.
+
+### Production Recommendations
+
+- Use HTTPS.
+- Enable secure cookies when deployed over HTTPS.
+- Keep `.env` private.
+- Use strong secrets and database passwords.
+- Restrict access to PostgreSQL and Ollama ports.
+- Use least-privilege database accounts.
+- Review permissions and approval policies before production use.
+
+**Important:** AI-generated SQL must always be treated as a proposal. Review its impact before allowing database changes.
+
+---
+
+## 🧪 Running Tests
+
+The project includes automated tests covering areas such as:
+
+- Authentication and authorization.
+- SQL validation and execution.
+- DBA approval workflows.
+- File attachments and exports.
+- Proxy behavior.
+- Security controls.
+
+Install the development dependencies and run the test suite using the project's documented testing procedure.
+
+Some integration tests require a configured PostgreSQL instance and the appropriate environment variables.
+
+---
+
+## 🛠️ Troubleshooting
+
+| Problem | Recommended Action |
+|---|---|
+| AI service unavailable | Start Ollama and verify that the configured model is installed. |
+| Database connection failure | Check PostgreSQL status and the connection settings in `.env`. |
+| Application fails to start | Verify the required environment variables, especially `SECRET_KEY`. |
+| Request requires approval | Sign in using a DBA account and review the pending request. |
+| Spreadsheet upload rejected | Check the file type, size, row limits, column headers, and formulas. |
+| SQL execution fails | Review the validation errors, permissions, and database configuration. |
+
+---
+
+## 🚀 Future Improvements
+
+Potential improvements for future versions include:
+
+- More comprehensive AI-generated SQL explanations.
+- Enhanced query review and visualization.
+- Expanded monitoring and operational dashboards.
+- Additional database support.
+- More comprehensive integration and security testing.
+- Improved deployment and developer documentation.
+
+*These are potential enhancements, not claims that the features are already implemented.*
+
+---
+
+## 📄 License
+
+No license is currently specified in the project documentation.
+
+Add an appropriate `LICENSE` file if you intend to distribute the project as open source.
+
+---
+
+## ⭐ Project Summary
+
+**AI Database Work Assistant** demonstrates how local AI, natural-language processing, SQL validation, role-based access control, human approval, and PostgreSQL can work together to support safer database operations.
+
+The goal is simple: make database interaction easier while keeping permissions, validation, and human oversight at the centre of the workflow.
