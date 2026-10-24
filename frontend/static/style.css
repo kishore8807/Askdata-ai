@@ -1,0 +1,46 @@
+/* Additions on top of the Stitch/Tailwind design. Colours reference the Stitch palette. */
+html,body{margin:0;padding:0}
+body{overscroll-behavior:none}
+::-webkit-scrollbar{width:0;height:0}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;user-select:none}
+.fill-1{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+
+/* SQL code block (Stitch "Generated SQL" panel) */
+.sql-block{background:#f7f3ee;border-radius:.5rem;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:20px;overflow:auto}
+.sql-block pre{margin:0;padding:12px 0;display:table;min-width:100%}
+.sql-line{display:table-row}
+.sql-ln{display:table-cell;width:2.5rem;text-align:right;padding-right:12px;color:#88726c99;user-select:none}
+.sql-tx{display:table-cell;white-space:pre-wrap;word-break:break-word;padding-right:16px}
+.tk-kw{color:#99462a;font-weight:500}
+.tk-str{color:#645e52}
+.tk-num{color:#9c4323}
+.tk-cm{color:#88726c;font-style:italic}
+textarea.sql-edit{width:100%;min-height:200px;background:#f7f3ee;border-radius:.5rem;padding:12px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:20px;color:#1c1c19;resize:vertical;outline:none}
+textarea.sql-edit:focus{box-shadow:0 0 0 2px rgba(153,70,42,.25)}
+
+/* tables */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{position:sticky;top:0;background:#f1ede8;text-align:left;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#645e52;font-weight:600;padding:10px 14px;white-space:nowrap}
+.data-table td{padding:10px 14px;border-top:1px solid rgba(219,193,185,.35);vertical-align:top}
+.data-table tr:hover td{background:rgba(247,243,238,.7)}
+.scroll-x{overflow:auto;max-width:100%}
+
+/* toasts / spinner / modal */
+.toast{pointer-events:auto;min-width:260px;max-width:420px;padding:12px 14px;border-radius:.75rem;box-shadow:0 8px 28px -6px rgba(43,42,39,.25);font-size:13px;display:flex;gap:10px;align-items:flex-start;animation:toast-in .18s ease-out}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.spinner{width:16px;height:16px;border-radius:9999px;border:2px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal-backdrop{position:fixed;inset:0;background:rgba(28,28,25,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:1rem}
+.fade-in{animation:toast-in .2s ease-out}
+details>summary{cursor:pointer;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+button:disabled{opacity:.5;cursor:not-allowed}
+.pipe-done{background:#ffdbd0;color:#541400}
+.pipe-active{background:#fc8d6633;color:#732606;box-shadow:inset 0 0 0 1px #99462a55}
+.pipe-idle{background:#f1ede8;color:#645e52}
+.pipe-skip{background:#f1ede8;color:#88726c;text-decoration:line-through}
+
+/* mic button (voice input) */
+.mic-btn.mic-on{background:#99462a;color:#fff;animation:mic-pulse 1.4s ease-out infinite}
+.mic-btn.mic-on:hover{background:#732606}
+@keyframes mic-pulse{0%{box-shadow:0 0 0 0 rgba(153,70,42,.45)}100%{box-shadow:0 0 0 12px rgba(153,70,42,0)}}
