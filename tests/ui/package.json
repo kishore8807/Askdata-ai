@@ -1,6 +1,0 @@
-{
-  "name": "ui-smoke",
-  "private": true,
-  "scripts": {"test": "node ui_smoke.js"},
-  "dependencies": {"jsdom": "^30.0.0"}
-}
